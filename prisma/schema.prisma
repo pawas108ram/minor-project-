@@ -1,0 +1,171 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String       @id @default(uuid())
+  username         String       @unique
+  firstname        String
+  lastname         String
+  email            String       @unique
+  isEmailVerified  Boolean      @default(false)
+  password         String
+  profilePicture   String?
+  bio              String?
+  joinDate         DateTime     @default(now())
+  profileUpdatedAt DateTime     @updatedAt
+  contactsLeft     Int          @default(5)
+  userTypeId       String?
+  comments         Comment[]
+  content          Content[]
+  followers        Follower[]   @relation("UserFollowers")
+  following        Follower[]   @relation("UserFollowing")
+  messages         Message[]
+  orders           Order[]
+  userType         UserType?     @relation(fields: [userTypeId], references: [id])
+  chats            Chat[]       @relation("UserChats")
+  accounts         Account[]
+}
+
+model Account {
+  id                String   @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Follower {
+  id          String  @id @default(uuid())
+  followerId  String
+  followingId String
+  follower    User    @relation("UserFollowers", fields: [followerId], references: [id])
+  following   User    @relation("UserFollowing", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
+}
+
+model Content {
+  id            String       @id @default(uuid())
+  creatorId     String
+  likedBy       String[]     @default([])
+  dislikedBy    String[]     @default([])
+  contentTypeId String
+  contentUrl    String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  comments      Comment[]
+  contentType   ContentType  @relation(fields: [contentTypeId], references: [id])
+  creator       User         @relation(fields: [creatorId], references: [id])
+  categories    Category[]   @relation("ContentCategories")
+  tags          Tag[]        @relation("ContentTags")
+}
+
+model Comment {
+  id          String    @id @default(uuid())
+  createdById String
+  contentId   String
+  likedBy     String[]  @default([])
+  dislikedBy  String[]  @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  content     Content   @relation(fields: [contentId], references: [id])
+  createdBy   User      @relation(fields: [createdById], references: [id])
+}
+
+model Chat {
+  id            String    @id @default(uuid())
+  lastMessageAt DateTime  @default(now())
+  userIds       String[]  @default([])
+  messages      Message[]
+  users         User[]    @relation("UserChats")
+}
+
+model Message {
+  id            String       @id @default(uuid())
+  chatId        String
+  body          String?
+  contentUrl    String?
+  contentTypeId String
+  createdAt     DateTime     @default(now())
+  senderId      String
+  seenBy        String[]     @default([])
+  updatedAt     DateTime     @updatedAt
+  chat          Chat         @relation(fields: [chatId], references: [id])
+  contentType   MessageType  @relation(fields: [contentTypeId], references: [id])
+  sender        User         @relation(fields: [senderId], references: [id])
+}
+
+model Membership {
+  id             String       @id @default(uuid())
+  contacts       Int
+  price          Float
+  description    String[]
+  membershipType String
+  orders         Order[]
+}
+
+model Order {
+  id           String      @id @default(uuid())
+  membershipId String
+  createdAt    DateTime    @default(now())
+  userId       String
+  membership   Membership  @relation(fields: [membershipId], references: [id])
+  user         User        @relation(fields: [userId], references: [id])
+}
+
+model Category {
+  id       String     @id @default(uuid())
+  name     String     @unique
+  contents Content[]  @relation("ContentCategories")
+}
+
+model Tag {
+  id       String     @id @default(uuid())
+  name     String     @unique
+  contents Content[]  @relation("ContentTags")
+}
+
+model UserType {
+  id       String     @id @default(uuid())
+  userType String     @unique
+  users    User[]
+}
+
+model ContentType {
+  id          String      @id @default(uuid())
+  contentType String      @unique
+  contents    Content[]
+}
+
+model MessageType {
+  id          String      @id @default(uuid())
+  messageType String      @unique
+  messages    Message[]
+}
+
+model Otp {
+  id          String   @id @default(uuid())
+  email       String?  @unique
+  otp         String
+  triesLeft   Int
+  expiresIn   Int
+  createdAt   DateTime @default(now())
+}
